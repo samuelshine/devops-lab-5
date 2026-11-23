@@ -1,0 +1,9 @@
+{
+  "name": "pod-pulse",
+  "version": "1.0.0",
+  "description": "Shows which Kubernetes pod served each request (DevOps Lab 5)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "author": "Samuel Shine",
+  "license": "MIT"
+}

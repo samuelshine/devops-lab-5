@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-pulse
+  namespace: lab5
+  labels:
+    app: pod-pulse
+  annotations:
+    kubernetes.io/change-cause: "declarative update to 2.0.0 from k8s/02-deployment.yaml"
+spec:
+  replicas: 2                       # matches the HPA minimum, the HPA owns scaling
+  revisionHistoryLimit: 10
+  minReadySeconds: 5                # a new pod must stay ready 5 s before it counts
+  progressDeadlineSeconds: 90       # mark the rollout as failed after 90 s with no progress
+  selector:
+    matchLabels:
+      app: pod-pulse
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1                   # at most one extra pod during an update
+      maxUnavailable: 0             # never drop below the desired replica count
+  template:
+    metadata:
+      labels:
+        app: pod-pulse
+        tier: web
+    spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:    # spread replicas evenly over the worker nodes
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor   # skip the tainted control-plane node when counting
+          labelSelector:
+            matchLabels:
+              app: pod-pulse
+          matchLabelKeys:           # count only pods of the same ReplicaSet (revision)
+            - pod-template-hash
+      containers:
+        - name: web
+          image: localhost:5001/pod-pulse:2.0.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: pod-pulse-config
+          env:                      # Downward API: the pod learns its own identity
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            - name: POD_IP
+              valueFrom: { fieldRef: { fieldPath: status.podIP } }
+            - name: NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10

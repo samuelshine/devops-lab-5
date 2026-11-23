@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod-pulse-config
+  namespace: lab5
+data:
+  GREETING: "Hello from Kubernetes. Lab 5, Samuel Shine (2547149)."
+  STARTUP_DELAY_MS: "3000"
