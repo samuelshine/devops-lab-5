@@ -1,0 +1,4 @@
+requests: 175   failed: 0
+responses per version:
+  90   1.0.0
+  85   2.0.0
